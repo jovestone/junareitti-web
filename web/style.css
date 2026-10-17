@@ -1,5 +1,6 @@
 :root {
   --green: #43a047;
+  --header: #0047ab; /* cobalt blue */
   --bg: #ffffff;
   --fg: #1b1d1b;
   --muted: #6b706b;
@@ -52,7 +53,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
            calc(env(safe-area-inset-right, 0px) + 12px)
            12px
            calc(env(safe-area-inset-left, 0px) + 12px);
-  background: var(--green);
+  background: var(--header);
 }
 
 .fields { display: grid; gap: 8px; }
