@@ -3,6 +3,8 @@
 Train timetables between two Finnish railway stations, as an installable web app.
 A web port of [JunaReitti](https://github.com/suunta/suunta), the 2018 React Native app.
 
+**Open the app: https://jovestone.github.io/junareitti-web/**
+
 Data: [Fintraffic / digitraffic.fi](https://www.digitraffic.fi/) open rail API, CC BY 4.0.
 
 ## Use on iPhone
