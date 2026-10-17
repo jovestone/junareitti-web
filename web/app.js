@@ -501,9 +501,9 @@ function toggleDetails(train) {
   render();
 }
 
-function renderRow(train, now) {
+function renderRow(train, index, now) {
   const open = state.expanded.has(train.key);
-  const row = el('div', 'row' + (train.cancelled ? ' cancelled' : '') + (open ? ' open' : ''));
+  const row = el('div', 'row' + (index % 2 ? ' alt' : '') + (train.cancelled ? ' cancelled' : '') + (open ? ' open' : ''));
   row.setAttribute('role', 'row');
   row.dataset.key = train.key;
   row.tabIndex = 0;
@@ -518,7 +518,7 @@ function renderRow(train, now) {
 
   const lineCell = el('span', 'cell');
   lineCell.setAttribute('role', 'cell');
-  lineCell.appendChild(el('span', train.line ? 'line line-' + train.line : 'long', train.label));
+  lineCell.appendChild(el('span', train.line ? 'line' : 'long', train.label));
   row.appendChild(lineCell);
 
   row.appendChild(timeCell(train.dep, train.cancelled ? '' : minutesUntil(train.dep.time, now)));
@@ -570,10 +570,11 @@ function render() {
     head.appendChild(th);
   }
   els.list.appendChild(head);
-  for (const train of state.trains) {
-    els.list.appendChild(renderRow(train, now));
+  // Stripes come from the train's index, not :nth-child, since open details rows sit in between.
+  state.trains.forEach((train, index) => {
+    els.list.appendChild(renderRow(train, index, now));
     if (state.expanded.has(train.key)) els.list.appendChild(renderDetails(train));
-  }
+  });
   // Keyboard focus survives re-renders (e.g. the auto refresh) by refocusing the same train.
   if (focusKey) {
     const row = Array.from(els.list.children).find(node => node.dataset.key === focusKey);

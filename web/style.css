@@ -7,6 +7,7 @@
   --line: #e7eae7;
   --surface: #ffffff;
   --highlight: #e8f5e9;
+  --row-alt: #f3f5f8;
   --late: #d32f2f;
   color-scheme: light;
 }
@@ -21,6 +22,7 @@
     --line: #262a26;
     --surface: #1d211d;
     --highlight: #23362a;
+    --row-alt: #1a1d1a;
     --late: #ff6b6b;
     color-scheme: dark;
   }
@@ -34,6 +36,7 @@
   --line: #262a26;
   --surface: #1d211d;
   --highlight: #23362a;
+  --row-alt: #1a1d1a;
   --late: #ff6b6b;
   color-scheme: dark;
 }
@@ -195,6 +198,8 @@ main {
   -webkit-tap-highlight-color: transparent;
 }
 
+.row.alt { background: var(--row-alt); }
+
 .row:not(.head):active,
 .row.open { background: var(--highlight); }
 
@@ -267,8 +272,6 @@ main {
   color: #fff;
   background: var(--green);
 }
-
-.line.line-P { background: #d32f2f; }
 
 .long { font-weight: 600; }
 
