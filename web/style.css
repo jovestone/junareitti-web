@@ -202,6 +202,8 @@ main {
   background: var(--green);
 }
 
+.line.line-P { background: #d32f2f; }
+
 .long { font-weight: 600; }
 
 .row.cancelled .time,

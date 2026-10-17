@@ -396,7 +396,7 @@ function renderRow(train, now) {
 
   const lineCell = el('span', 'cell');
   lineCell.setAttribute('role', 'cell');
-  lineCell.appendChild(el('span', train.line ? 'line' : 'long', train.label));
+  lineCell.appendChild(el('span', train.line ? 'line line-' + train.line : 'long', train.label));
   row.appendChild(lineCell);
 
   row.appendChild(timeCell(train.dep, train.cancelled ? '' : minutesUntil(train.dep.time, now)));

@@ -1,6 +1,6 @@
 // Caches the app shell so the home-screen app opens instantly and offline.
 // Train data always comes from the network. Bump CACHE when shipping changes to SHELL files.
-const CACHE = 'junareitti-v1';
+const CACHE = 'junareitti-v2';
 const SHELL = [
   './',
   'index.html',
