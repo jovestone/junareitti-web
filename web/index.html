@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>JunaReitti</title>
+  <meta name="description" content="Junien aikataulut kahden aseman välillä">
+  <meta name="theme-color" content="#43a047">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="JunaReitti">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="search">
+    <div class="fields">
+      <div class="field">
+        <label for="from">Mistä</label>
+        <input id="from" type="text" placeholder="Lähtöasema" autocomplete="off" autocorrect="off"
+               autocapitalize="words" spellcheck="false" enterkeyhint="next"
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list">
+        <ul class="suggestions" id="from-list" role="listbox" hidden></ul>
+      </div>
+      <div class="field">
+        <label for="to">Minne</label>
+        <input id="to" type="text" placeholder="Tuloasema" autocomplete="off" autocorrect="off"
+               autocapitalize="words" spellcheck="false" enterkeyhint="search"
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list">
+        <ul class="suggestions" id="to-list" role="listbox" hidden></ul>
+      </div>
+    </div>
+    <button id="swap" type="button" aria-label="Vaihda suunta" title="Vaihda suunta">⇅</button>
+  </header>
+
+  <main>
+    <div class="status">
+      <span id="status" aria-live="polite"></span>
+      <button id="refresh" type="button" hidden>Päivitä</button>
+    </div>
+    <div id="list" class="table" role="table" aria-label="Junat"></div>
+  </main>
+
+  <footer>
+    Tiedot: <a href="https://www.digitraffic.fi/" target="_blank" rel="noopener">Fintraffic / digitraffic.fi</a>, CC BY 4.0
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
