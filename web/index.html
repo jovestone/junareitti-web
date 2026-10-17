@@ -14,6 +14,13 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Apply the saved theme before first paint so there's no flash of the wrong colors.
+    try {
+      var theme = JSON.parse(localStorage.getItem('theme'));
+      if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <header class="search">
@@ -39,7 +46,10 @@
   <main>
     <div class="status">
       <span id="status" aria-live="polite"></span>
-      <button id="refresh" type="button" hidden>Päivitä</button>
+      <span class="status-actions">
+        <button id="theme" type="button"></button>
+        <button id="refresh" type="button" hidden>Päivitä</button>
+      </span>
     </div>
     <div id="list" class="table" role="table" aria-label="Junat"></div>
   </main>

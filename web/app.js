@@ -49,6 +49,7 @@ const els = {
   swap: document.getElementById('swap'),
   status: document.getElementById('status'),
   refresh: document.getElementById('refresh'),
+  theme: document.getElementById('theme'),
   list: document.getElementById('list'),
 };
 
@@ -593,6 +594,33 @@ els.swap.addEventListener('click', () => {
 });
 
 els.refresh.addEventListener('click', fetchTrains);
+
+// ---- Theme: auto (follow the phone) -> light -> dark ----
+
+const THEMES = [
+  { id: 'auto', icon: '◐', label: 'Teema: automaattinen' },
+  { id: 'light', icon: '☀︎', label: 'Teema: vaalea' }, // ︎: plain symbol, not an emoji on iOS
+  { id: 'dark', icon: '☾', label: 'Teema: tumma' },
+];
+
+function applyTheme(id) {
+  const theme = THEMES.find(t => t.id === id) || THEMES[0];
+  if (theme.id === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme.id;
+  els.theme.textContent = theme.icon;
+  els.theme.title = theme.label;
+  els.theme.setAttribute('aria-label', theme.label + '. Vaihda teemaa.');
+}
+
+els.theme.addEventListener('click', () => {
+  const current = store.get('theme', 'auto');
+  const index = THEMES.findIndex(t => t.id === current);
+  const next = THEMES[(index + 1) % THEMES.length].id;
+  store.set('theme', next);
+  applyTheme(next);
+});
+
+applyTheme(store.get('theme', 'auto'));
 
 setInterval(() => {
   if (document.visibilityState === 'visible' && !state.loading) fetchTrains();
