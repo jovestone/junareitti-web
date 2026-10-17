@@ -19,4 +19,5 @@ python -m http.server 8000 --directory web
 ```
 
 Pushing to `main` deploys `web/` via `.github/workflows/pages.yml`.
-When changing files listed in `web/sw.js`, bump its `CACHE` version so installed apps update.
+The service worker serves files network-first, so installed apps pick up changes on the next
+launch while online; the cached copy is only used offline.

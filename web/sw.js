@@ -1,6 +1,7 @@
-// Caches the app shell so the home-screen app opens instantly and offline.
-// Train data always comes from the network. Bump CACHE when shipping changes to SHELL files.
-const CACHE = 'junareitti-v2';
+// Keeps a copy of the app shell so the home-screen app also opens offline.
+// Online, files always come fresh from the network; the copy is only a fallback.
+// Train data is never cached here.
+const CACHE = 'junareitti-v3';
 const SHELL = [
   './',
   'index.html',
@@ -14,7 +15,12 @@ const SHELL = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's HTTP cache, which could otherwise hand back old files.
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(SHELL.map(url => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -25,21 +31,19 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Stale-while-revalidate for same-origin files; everything else goes straight to the network.
+// Network first (revalidating with the server), falling back to the saved copy when offline.
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
   event.respondWith(
-    caches.open(CACHE).then(cache =>
-      cache.match(event.request, { ignoreSearch: true }).then(cached => {
-        const network = fetch(event.request)
-          .then(response => {
-            if (response.ok) cache.put(event.request, response.clone());
-            return response;
-          })
-          .catch(() => cached);
-        return cached || network;
+    fetch(event.request, { cache: 'no-cache' })
+      .then(response => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE).then(cache => cache.put(event.request, copy));
+        }
+        return response;
       })
-    )
+      .catch(() => caches.match(event.request, { ignoreSearch: true }))
   );
 });
