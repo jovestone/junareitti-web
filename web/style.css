@@ -163,6 +163,45 @@ main {
   border-bottom: 1px solid var(--line);
 }
 
+.row:not(.head) {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.row:not(.head):active,
+.row.open { background: var(--highlight); }
+
+.row:focus { outline: none; }
+
+.row:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+
+.details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  padding: 4px 16px 14px;
+  font-size: 14px;
+  background: var(--highlight);
+  border-bottom: 1px solid var(--line);
+}
+
+.stop-title { margin-bottom: 4px; font-weight: 600; }
+
+.details dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.details dt { color: var(--muted); }
+
+.details dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.details .late { color: var(--late); }
+
+.cause { grid-column: 1 / -1; margin: 0; }
+
 .row.head {
   min-height: 0;
   padding-block: 6px;

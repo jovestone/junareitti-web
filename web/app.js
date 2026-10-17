@@ -34,6 +34,7 @@ const state = {
   from: null,
   to: null,
   trains: [],
+  expanded: new Set(), // keys of trains whose details are open
   loading: false,
   message: '',
   updated: null,
@@ -53,6 +54,7 @@ const els = {
 
 const timeFormat = new Intl.DateTimeFormat('fi-FI', { hour: '2-digit', minute: '2-digit', timeZone: TIME_ZONE });
 const formatTime = date => timeFormat.format(date);
+const secondsFormat = new Intl.DateTimeFormat('fi-FI', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: TIME_ZONE });
 
 // ---- Stations ----
 
@@ -280,18 +282,66 @@ function hasDeparted(row, now) {
 
 // Finds the leg fromCode -> toCode: the last departure from fromCode before arriving at toCode.
 // Ring lines (I/P) pass some stations twice, so taking the first departure would be wrong.
+// Also returns the delay causes reported anywhere on the route up to the arrival.
 function findLeg(rows, fromCode, toCode, now) {
   let dep = null;
+  const causes = [];
   for (const row of rows) {
+    if (row.causes) causes.push(...row.causes);
     if (!row.trainStopping || !row.commercialStop) continue;
     if (row.type === 'DEPARTURE' && row.stationShortCode === fromCode) {
       dep = row;
     } else if (dep && row.type === 'ARRIVAL' && row.stationShortCode === toCode) {
-      if (!hasDeparted(dep, now)) return { dep, arr: row };
+      if (!hasDeparted(dep, now)) return { dep, arr: row, causes };
       dep = null;
     }
   }
   return null;
+}
+
+// Most specific code first, e.g. third level "E201" over detailed "E2" over category "E".
+function causeCodes(causes) {
+  const codes = [];
+  for (const c of causes) {
+    const code = c.thirdCategoryCode || c.detailedCategoryCode || c.categoryCode;
+    if (code && !codes.includes(code)) codes.push(code);
+  }
+  return codes;
+}
+
+const CAUSE_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
+let causeNames = null;
+let causeNamesLoading = null;
+
+// Maps delay cause codes to their Finnish names; fetched only when details are first opened.
+function loadCauseNames() {
+  if (causeNames || causeNamesLoading) return causeNamesLoading || Promise.resolve(causeNames);
+  const cached = store.get('causeNames', null);
+  if (cached && Date.now() - cached.fetched < CAUSE_CACHE_MS) {
+    causeNames = cached.names;
+    return Promise.resolve(causeNames);
+  }
+  const lists = [
+    ['cause-category-codes', 'categoryCode', 'categoryName'],
+    ['detailed-cause-category-codes', 'detailedCategoryCode', 'detailedCategoryName'],
+    ['third-cause-category-codes', 'thirdCategoryCode', 'thirdCategoryName'],
+  ];
+  causeNamesLoading = Promise.all(lists.map(([path, codeKey, nameKey]) =>
+    fetch(API + '/metadata/' + path, { headers: API_HEADERS })
+      .then(res => (res.ok ? res.json() : []))
+      .then(items => items
+        // Codes can have several versions; keep the newest name.
+        .sort((a, b) => String(a.validFrom).localeCompare(String(b.validFrom)))
+        .map(item => [item[codeKey], item[nameKey]]))
+  ))
+    .then(results => {
+      causeNames = Object.fromEntries([].concat(...results));
+      store.set('causeNames', { fetched: Date.now(), names: causeNames });
+      return causeNames;
+    })
+    .catch(() => (cached ? cached.names : {}))
+    .finally(() => { causeNamesLoading = null; });
+  return causeNamesLoading;
 }
 
 function timeInfo(row) {
@@ -318,6 +368,9 @@ function buildTrains(trains, fromCode, toCode, now) {
       track: leg.dep.commercialTrack || '–',
       cancelled: !!(train.cancelled || leg.dep.cancelled || leg.arr.cancelled),
       duration: arr.scheduled - dep.scheduled,
+      depRow: leg.dep,
+      arrRow: leg.arr,
+      causes: causeCodes(leg.causes),
     });
   }
   const minDuration = Math.min(...result.map(t => t.duration));
@@ -390,9 +443,77 @@ function minutesUntil(date, now) {
   return '';
 }
 
+function delayText(minutes) {
+  if (minutes > 0) return '+' + minutes + ' min myöhässä';
+  if (minutes < 0) return -minutes + ' min etuajassa';
+  return 'ajallaan';
+}
+
+// Scheduled vs. live estimate vs. actual time for one stop.
+function stopDetails(title, row) {
+  const section = el('div', 'stop');
+  section.appendChild(el('div', 'stop-title', title));
+  const dl = el('dl');
+  const add = (label, value, className) => {
+    dl.appendChild(el('dt', '', label));
+    dl.appendChild(el('dd', className || '', value));
+  };
+  add('Aikataulu', formatTime(new Date(row.scheduledTime)));
+  if (row.cancelled) {
+    add('Tila', 'Peruttu', 'late');
+  } else if (row.actualTime) {
+    add('Toteutunut', secondsFormat.format(new Date(row.actualTime)));
+  } else if (row.liveEstimateTime) {
+    add('Arvio', formatTime(new Date(row.liveEstimateTime)));
+  } else {
+    add('Arvio', 'ei vielä'); // live estimates appear once the train is on the move
+  }
+  if (!row.cancelled && typeof row.differenceInMinutes === 'number') {
+    const minutes = row.differenceInMinutes;
+    add(row.actualTime ? 'Ero' : 'Arvioitu ero', delayText(minutes), minutes > 0 ? 'late' : '');
+  }
+  section.appendChild(dl);
+  return section;
+}
+
+function renderDetails(train) {
+  const details = el('div', 'details');
+  details.id = 'details-' + train.key.replace(/\W/g, '-');
+  const track = train.depRow.commercialTrack ? ', raide ' + train.depRow.commercialTrack : '';
+  details.appendChild(stopDetails('Lähtö ' + state.from.name + track, train.depRow));
+  details.appendChild(stopDetails('Saapuminen ' + state.to.name, train.arrRow));
+  if (train.causes.length) {
+    const names = causeNames || {};
+    const text = train.causes.map(code => names[code] || code).join(', ');
+    details.appendChild(el('p', 'cause', 'Syy: ' + text));
+  }
+  return details;
+}
+
+function toggleDetails(train) {
+  if (state.expanded.has(train.key)) {
+    state.expanded.delete(train.key);
+  } else {
+    state.expanded.add(train.key);
+    if (!causeNames && train.causes.length) loadCauseNames().then(render);
+  }
+  render();
+}
+
 function renderRow(train, now) {
-  const row = el('div', 'row' + (train.cancelled ? ' cancelled' : ''));
+  const open = state.expanded.has(train.key);
+  const row = el('div', 'row' + (train.cancelled ? ' cancelled' : '') + (open ? ' open' : ''));
   row.setAttribute('role', 'row');
+  row.dataset.key = train.key;
+  row.tabIndex = 0;
+  row.setAttribute('aria-expanded', String(open));
+  row.addEventListener('click', () => toggleDetails(train));
+  row.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleDetails(train);
+    }
+  });
 
   const lineCell = el('span', 'cell');
   lineCell.setAttribute('role', 'cell');
@@ -429,6 +550,8 @@ function render() {
   els.refresh.hidden = !hasRoute;
   els.refresh.disabled = state.loading;
 
+  const focused = document.activeElement;
+  const focusKey = focused && els.list.contains(focused) ? focused.dataset.key : null;
   els.list.textContent = '';
   if (!hasRoute) {
     els.list.appendChild(el('p', 'empty', 'Valitse lähtö- ja tuloasema.'));
@@ -446,7 +569,15 @@ function render() {
     head.appendChild(th);
   }
   els.list.appendChild(head);
-  for (const train of state.trains) els.list.appendChild(renderRow(train, now));
+  for (const train of state.trains) {
+    els.list.appendChild(renderRow(train, now));
+    if (state.expanded.has(train.key)) els.list.appendChild(renderDetails(train));
+  }
+  // Keyboard focus survives re-renders (e.g. the auto refresh) by refocusing the same train.
+  if (focusKey) {
+    const row = Array.from(els.list.children).find(node => node.dataset.key === focusKey);
+    if (row) row.focus({ preventScroll: true });
+  }
 }
 
 // ---- Startup ----
